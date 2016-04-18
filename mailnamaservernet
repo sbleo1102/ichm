@@ -1,0 +1,298 @@
+<?PHP
+
+$server = "mail.namaserver.net";
+$port = 110;
+
+
+#socket pop3
+$socket = fsockopen($server,110);
+if(!$socket)die("Can not open connection!");
+
+#connected
+#login
+fwrite($socket,"USER array\r\n");
+fwrite($socket,"PASS 12345\r\n");
+
+#list
+fwrite($socket,"LIST\r\n");
+
+#read
+fwrite($socket,"RETR 2\r\n"); #read email ke 2
+#close
+fwrite($socket, "QUIT\r\n");
+
+#ambil output
+while (!feof($socket)) { 
+$output .= trim(fgets($socket, 360000))."\n"; 
+}
+
+#close socket
+fclose($socket);
+
+echo $output; # echo isi email
+
+?>
+
+`NO` int(255) NOT NULL auto_increment,
+`ID` varchar(255) NOT NULL,
+`TUJUAN` varchar(255) NOT NULL,
+`NAMA` varchar(255) NOT NULL,
+`EMAIL` varchar(255) NOT NULL,
+`RETURN` varchar(255) NOT NULL,
+`JUDUL` varchar(255) NOT NULL,
+`ISI` longtext NOT NULL,
+`DIKIRIM` varchar(255) NOT NULL,
+`DITERIMA` varchar(255) NOT NULL,
+`DIPROSES` int(1) NOT NULL default '0',
+PRIMARY KEY (`NO`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=8 ;
+
+File-file
+
+class.pop.php
+
+<?php
+
+/*
+* POP3 Access v0.1
+* Mailbox reader
+* By ArRay a.k.a XterM | ExploreCrew
+*
+*/
+
+class POP3Access {
+public $MailServer;
+public $ServerPort;
+public $UserName;
+public $Password;
+public $LastRead;
+public $Num; #nomor dibaca
+public $Id; #id email
+public $Inbox;
+
+function __construct(){
+
+}
+
+function Connect(){
+$socket = fsockopen($this->MailServer,$this->ServerPort);
+if(!$socket){die("Connection failed!");}
+$this->Socket = $socket;
+self::Authentication();
+}
+
+function Authentication(){
+fwrite($this->Socket,"USER ".$this->UserName."\r\n");
+fwrite($this->Socket,"PASS ".$this->Password."\r\n");
+}
+
+function GetList(){ 
+$this->Connect();
+fwrite($this->Socket,"LIST\r\n");	
+$this->Output();
+
+if($this->LastRead){
+$this->OutputText = explode(" ".$this->LastRead."\r\n",$this->OutputText);
+$this->OutputText = $this->OutputText[1];
+}
+$this->OutputText = explode("\r\n",$this->OutputText);
+for($i=(($this->LastRead)?0:1);$i<count($this->OutputText);$i++){	
+$x = explode(" ",$this->OutputText[$i]); # [0]nomor [1]id
+if($x[1]!=""){
+#echo $x[0].": ".$x[1]."\r\n";
+$this->Num = $x[0];
+$this->Id	= $x[1];
+$this->Read();	
+}
+}
+}
+
+function Read(){ 
+$this->Connect();
+fwrite($this->Socket,"RETR ".$this->Num."\r\n");
+$this->ReadOut();
+$xr = explode("\r\n",$this->rOutputText);
+$cStart = false;
+foreach($xr as $n => $line){
+if($n==1){
+$this->Inbox[ID][] = $this->Id;
+$this->Inbox[diterima][] = substr($line,2,(strlen($line)-8));
+}
+if(eregi("^(Date: ).+$",$line)){ 
+$dikirim = str_replace("Date: ","",$line);
+$this->Inbox[dikirim][] = substr($dikirim,0,strpos($dikirim," -0800"));
+}
+if(eregi("^(To: ).+$",$line)){
+$line = str_replace('"','',$line);	
+$this->Inbox[tujuan][] = str_replace("To: ","",$line);	
+}
+if(eregi("^(From: ).+$",$line)){
+$this->Inbox[fromname][] = substr($line,6,(strpos($line,"<")-7));
+$this->Inbox[fromemail][] = substr($line,(strpos($line,"<")+1),(strlen($line)-2-(strpos($line,"<"))));
+}
+if(eregi("^(Return-Path: ).+$",$line)){
+$this->Inbox['return'][] = str_replace("Return-Path: ","",$line);
+}
+if(eregi("^(Subject: ).+$",$line)){	
+if(ereg("Q\?Spam\?=",$line)){
+$this->Inbox[subject][] = $xr[($n+1)];
+}
+else {
+$this->Inbox[subject][] = str_replace("Subject: ","",$line);
+}
+}
+
+if($cStart){
+if(eregi($bounder,$line)){
+$cStart = false;
+continue; 
+}
+$htmlbounder = $bounder."--";
+if(eregi($htmlbounder,$line)){
+$cStart = false;
+continue;
+}
+if(eregi("^(Content-Transfer-Encoding:).+$",$line))continue;
+if(eregi("^(X-OriginalArrivalTime:).+$",$line))continue;
+if(eregi("^(X-Antivirus:).+$",$line))continue;
+if(eregi("^(X-Antivirus-Status:).+$",$line))continue;
+if(eregi("^(Return-Path: ).+$",$line))continue;
+$c .= $line."\r\n";
+}
+
+if(eregi("^(Content-Type: text/plain;).+$",$line)){
+$bounder = $xr[($n-1)];
+$cStart = true;
+}
+
+if(eregi("^(Content-Type: text/html;).+$",$line)){
+$c = false;
+$cStart = true;
+}
+
+}
+$this->Inbox[content][] = $c;
+}
+
+function Output(){
+fwrite($this->Socket,"QUIT\r\n");
+while (!feof($this->Socket)) { 
+$OutputText .= trim(fread($this->Socket, 3600000))."\n";
+}
+fclose($this->Socket); 
+$xo = explode("+OK User successfully logged on.",$OutputText); 
+$xo = explode("+OK",$xo[1]);
+$this->OutputText = $xo[1];	
+}
+
+function ReadOut(){
+fwrite($this->Socket,"QUIT\r\n");
+while (!feof($this->Socket)) { 
+$rOutputText .= trim(fread($this->Socket, 3600000))."\n";
+}
+fclose($this->Socket); $this->Log($rOutputText);
+$xo = explode("+OK User successfully logged on.",$rOutputText); 
+$xo = explode("+OK",$xo[1]);
+$this->rOutputText = $xo[1];
+#echo "--------\r\n".$this->rOutputText."\r\n---------------\r\n";
+}
+
+function GetNew(){
+$this->GetList();
+}
+
+function Log($data){
+$sock = fopen("log.txt","a");
+$data .= "\r\n=======================================================================\r\n\r\n\r\n";
+fwrite($sock,$data);
+fclose($sock);
+}
+
+
+function __destruct(){
+//fclose($this->Socket);
+}
+}
+
+?>
+
+
+
+
+mail_download.php
+
+<?php
+
+/*
+* Email Downloader v0.1
+* Download and Save email to MySQL Database
+* By ArRay a.k.a XterM | XCrew
+*
+*/
+
+set_time_limit(0);
+include_once("class.pop.php");
+
+/* mysql */
+$SQLServer	= "localhost";
+$SQLUser	= "array";
+$SQLPass	= "array";
+$SQLDb	= "email";
+
+mysql_connect($SQLServer,$SQLUser,$SQLPass);
+mysql_select_db($SQLDb);
+
+/* pop3 */
+$pop = new POP3Access;
+$pop->MailServer	= "mail.namaserver.net";
+$pop->ServerPort	= 110; 
+$pop->UserName	= "array";
+$pop->Password	= "12345";
+
+
+/* cek last read */
+$sql = "select ID from inbox order by NO desc";
+$sql = mysql_query($sql);
+$data = mysql_fetch_array($sql);
+$last = $data[ID];
+
+if($last){
+$pop->LastRead = $last;
+}
+
+echo "Reading email...\r\n"; 
+flush();
+
+$pop->GetNew();
+
+echo "Saving to database...\r\n";
+flush();
+for($i=0;$i<count($pop->Inbox[diterima]);$i++){
+$sql = "insert into inbox values(
+'',
+'".$pop->Inbox[ID][$i]."',
+'".$pop->Inbox[tujuan][$i]."',
+'".$pop->Inbox[fromname][$i]."',
+'".$pop->Inbox[fromemail][$i]."',
+'".$pop->Inbox['return'][$i]."',
+'".addslashes($pop->Inbox[subject][$i])."',
+'".addslashes($pop->Inbox[content][$i])."',
+'".$pop->Inbox[dikirim][$i]."',
+'".$pop->Inbox[diterima][$i]."',
+'0'
+)";
+mysql_query($sql);
+}
+
+echo count($pop->Inbox[diterima])." Email downloaded!\r\n";
+exit();
+
+?>
+
+
+
+
+Jalakan script.
+
+php -q mail_download.php
+
